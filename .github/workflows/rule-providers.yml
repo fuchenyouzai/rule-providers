@@ -1,0 +1,36 @@
+name: youzai Update
+on:
+  push:
+  schedule:
+    # 每天北京时间16:15执行（格式：分 时 * * *）
+    - cron: '15 16 * * *'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Update MRS Files
+      run: |
+        # 1. 先拉取远程最新代码，避免后续冲突
+        git config --local user.name "github-actions[bot]"
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git pull origin main
+        
+        # 2. 删除旧的带前缀mrs文件（若存在），避免残留
+        rm -f geoip-cn.mrs geoip-private.mrs geosite-geolocation-!cn.mrs geosite-cn.mrs geosite-private.mrs
+        
+        # 3. 下载5个文件，加前缀区分来源，避免重名
+        wget -O geoip-cn.mrs https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/cn.mrs
+        wget -O geoip-private.mrs https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/private.mrs
+        wget -O geosite-geolocation-!cn.mrs https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/geolocation-!cn.mrs
+        wget -O geosite-cn.mrs https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cn.mrs
+        wget -O geosite-private.mrs https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/private.mrs
+        
+        # 4. 提交所有更新的mrs文件
+        git add geoip-cn.mrs geoip-private.mrs geosite-geolocation-!cn.mrs geosite-cn.mrs geosite-private.mrs
+        git commit -m "Update MetaCubeX mrs files (geoip + geosite)"
+    - name: Push changes
+      run: git push origin main
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
